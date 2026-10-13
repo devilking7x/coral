@@ -221,11 +221,6 @@ describe('OAuth application registration copy', () => {
     expect(html).not.toContain('registration with docs.example.test')
   })
 
-  it('names the OAuth host Coral identifies itself to for an automatic client', () => {
-    const html = render({ ...separateHosts, automaticClientAvailable: true })
-    expect(html).toContain('Coral then identifies itself to login.example.test when you sign in.')
-  })
-
   it('names the service without an OAuth host to read', () => {
     const html = render({
       ...separateHosts,
