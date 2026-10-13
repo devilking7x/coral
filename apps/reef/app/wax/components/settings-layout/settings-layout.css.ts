@@ -11,6 +11,8 @@ export const page = style({
   gap: 48,
   // The two columns and the gap between them; removal's rule spans the same.
   maxWidth: 848,
+  // Centred in a wide page, so the cards and their aside read as one column.
+  marginInline: 'auto',
   minWidth: 0,
   width: '100%',
   '@media': { [`screen and (max-width: ${breakpoints.mobile})`]: { gap: 32 } },
@@ -47,6 +49,23 @@ export const main = style({
 })
 // Each card in the main column fills it.
 globalStyle(`${main} > *`, { minWidth: 0, width: '100%' })
+
+// The aside: a card of facts, each its label over its value.
+export const aside = style({ gap: 16, minWidth: 0 })
+export const facts = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 12,
+  margin: 0,
+  minWidth: 0,
+})
+export const fact = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 4,
+  minWidth: 0,
+})
+export const factValue = style({ margin: 0, minWidth: 0 })
 
 // Removal: its heading and consequence take the row, the action keeps the right edge.
 export const removal = style({
