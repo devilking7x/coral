@@ -1,0 +1,367 @@
+name: pipedrive
+version: 0.1.0
+dsl_version: 3
+backend: http
+description: >-
+  Query the core Pipedrive sales objects: deals, persons, organizations,
+  pipelines, and activities. Uses the v2 API with token authentication.
+base_url: "https://{{input.PIPEDRIVE_COMPANY_DOMAIN}}.pipedrive.com"
+
+inputs:
+  PIPEDRIVE_COMPANY_DOMAIN:
+    kind: variable
+    hint: |
+      Your Pipedrive company domain, without the .pipedrive.com suffix.
+      Find it under Settings → Personal preferences → API.
+      Example: if your Pipedrive URL is https://acme.pipedrive.com, enter: acme
+  PIPEDRIVE_API_TOKEN:
+    kind: secret
+    hint: |
+      Your personal Pipedrive API token.
+      Find it under Settings → Personal preferences → API in your Pipedrive account.
+
+auth:
+  type: HeaderAuth
+  headers:
+    - name: x-api-token
+      from: input
+      key: PIPEDRIVE_API_TOKEN
+
+test_queries:
+  - SELECT id, name FROM pipedrive.pipelines LIMIT 5
+  - SELECT id, title, status, value FROM pipedrive.deals WHERE status = 'open' LIMIT 5
+  - SELECT id, name FROM pipedrive.persons LIMIT 5
+
+tables:
+  # ── deals ──────────────────────────────────────────────────────────
+  - name: deals
+    description: >-
+      Sales deals in your Pipedrive account. Filter by status, pipeline,
+      or stage. Join with persons on person_id, organizations on org_id,
+      and pipelines on pipeline_id.
+    guide: |
+      Optional filters push down to the API: `status` (open, won, lost),
+      `pipeline_id`, `stage_id`. Join with `pipedrive.persons` on
+      `person_id = id` and `pipedrive.organizations` on `org_id = id`.
+    filters:
+      - name: status
+        type: Utf8
+        description: Deal status — one of open, won, lost.
+      - name: pipeline_id
+        type: Int64
+        description: Restrict to a single pipeline.
+      - name: stage_id
+        type: Int64
+        description: Restrict to a single pipeline stage.
+    request:
+      method: GET
+      path: /api/v2/deals
+      query:
+        - name: status
+          from: filter
+          key: status
+        - name: pipeline_id
+          from: filter
+          key: pipeline_id
+        - name: stage_id
+          from: filter
+          key: stage_id
+    response:
+      rows_path:
+        - data
+    pagination:
+      mode: cursor_query
+      response_cursor_path:
+        - additional_data
+        - next_cursor
+      cursor_param: cursor
+      page_size:
+        default: 100
+        max: 500
+        query_param: limit
+    columns:
+      - name: id
+        type: Int64
+        nullable: false
+        description: Unique deal identifier.
+      - name: title
+        type: Utf8
+        nullable: true
+        description: Deal title.
+      - name: status
+        type: Utf8
+        nullable: true
+        description: Deal status (open, won, lost).
+      - name: value
+        type: Float64
+        nullable: true
+        description: Monetary value of the deal.
+      - name: currency
+        type: Utf8
+        nullable: true
+        description: Currency code, e.g. USD.
+      - name: pipeline_id
+        type: Int64
+        nullable: true
+        description: Pipeline the deal belongs to.
+      - name: stage_id
+        type: Int64
+        nullable: true
+        description: Current pipeline stage.
+      - name: person_id
+        type: Int64
+        nullable: true
+        description: Linked person contact.
+      - name: org_id
+        type: Int64
+        nullable: true
+        description: Linked organization.
+      - name: owner_id
+        type: Int64
+        nullable: true
+        description: Owning user.
+      - name: add_time
+        type: Utf8
+        nullable: true
+        description: Creation timestamp.
+      - name: update_time
+        type: Utf8
+        nullable: true
+        description: Last update timestamp.
+
+  # ── persons ────────────────────────────────────────────────────────
+  - name: persons
+    description: >-
+      People contacts in your Pipedrive account. Optionally filter by
+      organization. Join with organizations on org_id and with deals
+      on id = person_id.
+    guide: |
+      Optional `org_id` filter pushes down to the API. Join with
+      `pipedrive.organizations` on `org_id = id`.
+    filters:
+      - name: org_id
+        type: Int64
+        description: Restrict to one organization.
+    request:
+      method: GET
+      path: /api/v2/persons
+      query:
+        - name: org_id
+          from: filter
+          key: org_id
+    response:
+      rows_path:
+        - data
+    pagination:
+      mode: cursor_query
+      response_cursor_path:
+        - additional_data
+        - next_cursor
+      cursor_param: cursor
+      page_size:
+        default: 100
+        max: 500
+        query_param: limit
+    columns:
+      - name: id
+        type: Int64
+        nullable: false
+        description: Unique person identifier.
+      - name: name
+        type: Utf8
+        nullable: true
+        description: Full name.
+      - name: first_name
+        type: Utf8
+        nullable: true
+        description: First name.
+      - name: last_name
+        type: Utf8
+        nullable: true
+        description: Last name.
+      - name: org_id
+        type: Int64
+        nullable: true
+        description: Linked organization.
+      - name: owner_id
+        type: Int64
+        nullable: true
+        description: Owning user.
+      - name: add_time
+        type: Utf8
+        nullable: true
+        description: Creation timestamp.
+      - name: update_time
+        type: Utf8
+        nullable: true
+        description: Last update timestamp.
+
+  # ── organizations ──────────────────────────────────────────────────
+  - name: organizations
+    description: >-
+      Companies and organizations in your Pipedrive account. Join with
+      persons on id = org_id and with deals on id = org_id.
+    guide: |
+      No filters. Join with `pipedrive.persons` on `id = org_id` to list
+      contacts per company.
+    request:
+      method: GET
+      path: /api/v2/organizations
+    response:
+      rows_path:
+        - data
+    pagination:
+      mode: cursor_query
+      response_cursor_path:
+        - additional_data
+        - next_cursor
+      cursor_param: cursor
+      page_size:
+        default: 100
+        max: 500
+        query_param: limit
+    columns:
+      - name: id
+        type: Int64
+        nullable: false
+        description: Unique organization identifier.
+      - name: name
+        type: Utf8
+        nullable: true
+        description: Organization name.
+      - name: owner_id
+        type: Int64
+        nullable: true
+        description: Owning user.
+      - name: add_time
+        type: Utf8
+        nullable: true
+        description: Creation timestamp.
+      - name: update_time
+        type: Utf8
+        nullable: true
+        description: Last update timestamp.
+
+  # ── pipelines ──────────────────────────────────────────────────────
+  - name: pipelines
+    description: >-
+      Sales pipelines in your Pipedrive account. Each pipeline contains
+      stages; join with deals on id = pipeline_id for per-pipeline
+      forecasting.
+    guide: |
+      No filters. Join with `pipedrive.deals` on `id = pipeline_id`.
+    request:
+      method: GET
+      path: /api/v2/pipelines
+    response:
+      rows_path:
+        - data
+    pagination:
+      mode: cursor_query
+      response_cursor_path:
+        - additional_data
+        - next_cursor
+      cursor_param: cursor
+      page_size:
+        default: 100
+        max: 500
+        query_param: limit
+    columns:
+      - name: id
+        type: Int64
+        nullable: false
+        description: Unique pipeline identifier.
+      - name: name
+        type: Utf8
+        nullable: true
+        description: Pipeline display name.
+      - name: order_nr
+        type: Int64
+        nullable: true
+        description: Display order.
+      - name: add_time
+        type: Utf8
+        nullable: true
+        description: Creation timestamp.
+      - name: update_time
+        type: Utf8
+        nullable: true
+        description: Last update timestamp.
+
+  # ── activities ─────────────────────────────────────────────────────
+  - name: activities
+    description: >-
+      Calls, meetings, tasks, and other activities in your Pipedrive
+      account. Filter by completion state. Join with deals on deal_id.
+    guide: |
+      Optional `done` filter pushes down to the API (true/false). Join
+      with `pipedrive.deals` on `deal_id = id`.
+    filters:
+      - name: done
+        type: Boolean
+        description: true for completed activities, false for open ones.
+    request:
+      method: GET
+      path: /api/v2/activities
+      query:
+        - name: done
+          from: filter
+          key: done
+    response:
+      rows_path:
+        - data
+    pagination:
+      mode: cursor_query
+      response_cursor_path:
+        - additional_data
+        - next_cursor
+      cursor_param: cursor
+      page_size:
+        default: 100
+        max: 500
+        query_param: limit
+    columns:
+      - name: id
+        type: Int64
+        nullable: false
+        description: Unique activity identifier.
+      - name: subject
+        type: Utf8
+        nullable: true
+        description: Activity subject line.
+      - name: type
+        type: Utf8
+        nullable: true
+        description: Activity type (call, meeting, task, ...).
+      - name: done
+        type: Boolean
+        nullable: true
+        description: Completion state.
+      - name: deal_id
+        type: Int64
+        nullable: true
+        description: Linked deal.
+      - name: person_id
+        type: Int64
+        nullable: true
+        description: Linked person.
+      - name: org_id
+        type: Int64
+        nullable: true
+        description: Linked organization.
+      - name: owner_id
+        type: Int64
+        nullable: true
+        description: Assigned user.
+      - name: due_date
+        type: Utf8
+        nullable: true
+        description: Due date.
+      - name: add_time
+        type: Utf8
+        nullable: true
+        description: Creation timestamp.
+      - name: update_time
+        type: Utf8
+        nullable: true
+        description: Last update timestamp.
