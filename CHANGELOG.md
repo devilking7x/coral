@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.1.0](https://github.com/withcoral/coral/compare/v1.0.0...v1.1.0) (2026-10-13)
+
+
+### Features
+
+* **reef:** filter the Agents and Members tables with one shared filter menu ([#2331](https://github.com/withcoral/coral/issues/2331)) ([db09bbc](https://github.com/withcoral/coral/commit/db09bbc4d1015e3afa61e93d37c23af3f65cbe10))
+* **reef:** show your account as a settings page with clickable account rows ([#2330](https://github.com/withcoral/coral/issues/2330)) ([4a9e1cb](https://github.com/withcoral/coral/commit/4a9e1cbe6647a1332872ca278ee94baacf72b533))
+
+
+### Bug Fixes
+
+* **reef:** stop narrating what Coral does in interface copy ([#2332](https://github.com/withcoral/coral/issues/2332)) ([e74a2e0](https://github.com/withcoral/coral/commit/e74a2e0b8a127b506852e919f1e17ff61064fe41))
+
 ## [1.0.0](https://github.com/withcoral/coral/compare/v1.0.0-beta.11...v1.0.0) (2026-10-12)
 
 
